@@ -1,0 +1,2 @@
+{:require  [rumtest.app]
+ :init-fns [rumtest.app/init]}
