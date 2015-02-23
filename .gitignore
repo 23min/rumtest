@@ -8,6 +8,7 @@ pom.xml.asc
 /.lein-*
 /.nrepl-port
 /resources/public/js
+/resources/public/out
 /out
 /.repl
 /.nrepl-history

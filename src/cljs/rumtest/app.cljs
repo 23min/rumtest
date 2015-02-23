@@ -1,15 +1,16 @@
 (ns rumtest.app
-  (:require [rum]
-            [tailrecursion.javelin :as jav]
-            [weasel.repl :as repl])
-  (:require-macros 
-            [tailrecursion.javelin :as jav :refer [cell= defc= defc]]))
+  (:require
+    [rum]
+    [sablono.core]
+    [tailrecursion.javelin :as jav]
+  )
+  (:require-macros
+    [tailrecursion.javelin :as jav :refer [cell= defc= defc]])
+  )
 
 ; debugging
 
 (enable-console-print!)
-(when-not (repl/alive?)
-  (repl/connect "ws://localhost:9001"))
 
 ; helpers
 
@@ -28,19 +29,19 @@
 
 ; UI components
 
-(rum/defc colored-clock < rum/reactive 
+(rum/defc colored-clock < rum/reactive
   "Outputs:
    <div class=\"colored-clock\" data-reactid=\".0\">
    <div data-reactid=\".0.0\">
-   <span style=\"color:Red;\" data-reactid=\".0.0.0\">Seconds: 0</span></div></div>"      
+   <span style=\"color:Red;\" data-reactid=\".0.0.0\">Seconds: 0</span></div></div>"
   []
   [:.colored-clock
-    [:div 
-      [:span {:style {:color @color}} 
+    [:div
+      [:span {:style {:color @color}}
         (rum/react seconds)]]])
 
-(rum/defc labelTime 
-  "Simplest component, outputs a label"     
+(rum/defc labelTime
+  "Simplest component, outputs a label"
   []
   [:label "Tomato"])
 
