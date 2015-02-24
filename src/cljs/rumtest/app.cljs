@@ -1,6 +1,6 @@
 (ns rumtest.app
   (:require
-    [rum :as rum]
+    [rum]
     [sablono.core]
     [tailrecursion.javelin :as jav]
 
@@ -12,40 +12,23 @@
     [cljs.core.async.macros :as asyncm :refer (go go-loop)]
   ))
 
-; debugging
+; initialize ==================================================================
 
 (enable-console-print!)
 
-; websocket messaging
+(declare color)
 
-(def default-chsk-url-fn
-  "`window-location` keys:
-    :href     ; \"http://localhost:8080/\"
-    :protocol ; \"http:\" ; Note the :
-    :hostname ; \"localhost\"
-    :host     ; \"localhost:8080\"
-    :pathname ; \"\"
-    :search   ; \"\"
-    :hash     ; \""
-  (fn [path {:as window-location :keys [protocol host pathname]} websocket?]
-    (str (if-not websocket? protocol (if (= protocol "https:") "wss:" "ws:"))
-         "//" host (or path pathname))))
-
+; websocket messaging =========================================================
 
 (let [{:keys [chsk ch-recv send-fn state]}
-      (sente/make-channel-socket! "/chsk" {}) ; Note the same path as before
-;;        {:type :auto  ; e/o #{:auto :ajax :ws}
-;;         :chsk-url-fn default-chsk-url-fn
-;;        })]
-      ]
+      (sente/make-channel-socket! "/chsk" {})]
   (def chsk       chsk)
   (def ch-chsk    ch-recv) ; ChannelSocket's receive channel
   (def chsk-send! send-fn) ; ChannelSocket's send API fn
   (def chsk-state state))   ; Watchable, read-only atom
 
-
 (defn event-loop
-  "Handle inbound events."
+  "Handle inbound events and update Javelin cells"
   []
   (go (loop [[op arg] (:event (<! ch-chsk))]
       (cond
@@ -53,49 +36,60 @@
           (let [data (nth arg 1)]
             (println data)
             (cond
-               (contains? data :cell1/color)
-;;              (println (str (:cell1/color data)))))
-                                              (reset! colorstyle (:cell1/color data))))
+               (contains? data :cell1/color) (reset! color (:cell1/color data))))
         :else (println (str "Received op: " op " arg: " arg)))
     (recur (:event (<! ch-chsk))))))
 
-; helpers
+; helpers =====================================================================
 
 (declare current-time)
 (defn now [] (.getSeconds (js/Date.)))
 (defn tick [] (js/setInterval #(reset! current-time (now)) 1000))
 
-; input cells
+; input cells =================================================================
 
 (jav/defc current-time 0)
 
-; UI driver cells
-(def colorstyle (atom "Red"))
+; UI driver cells =============================================================
+
 (jav/defc color "Red")
-;; (jav/defc= colorstyle @color)
 (jav/defc= seconds (str "Seconds: " current-time))
 
-; UI components
+; UI components ===============================================================
 
 (rum/defc colored-clock < rum/reactive
-  "Outputs:
-   <div class=\"colored-clock\" data-reactid=\".0\">
-   <div data-reactid=\".0.0\">
-   <span style=\"color:Red;\" data-reactid=\".0.0.0\">Seconds: 0</span></div></div>"
+  "Clock that changes color once every 10s"
   []
   [:.colored-clock
     [:div
-      [:span {:style {:color (rum/react colorstyle)}}
+      [:span {:style {:color (rum/react color)}}
         (rum/react seconds)]]])
 
-(rum/defc labelTime
+(rum/defc labelFooter
   "Simplest component, outputs a label"
   []
-  [:label "Tomato"])
+  [:label "Footer"])
+
+(rum/defc page < rum/static []
+  [:div
+    [:div#header
+      [:h1 "Rum Test"]]
+    [:div#content
+      [:div [:span
+              (colored-clock)]]]
+    [:div#footer
+      [:div [:span (labelFooter)]]]]
+     )
+
+(defn render []
+    (rum/mount (page) (.-body js/document)))
+
+; init ========================================================================
 
 (defn init []
   (tick)
-  (let [elem (.getElementById js/document "container")
-          comp (rum/mount (colored-clock) elem)]))
+  (event-loop)
+  (render))
 
-(event-loop)
+
+
